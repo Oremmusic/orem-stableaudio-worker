@@ -1,1 +1,11 @@
-
+runpod
+torch
+torchaudio
+diffusers
+transformers
+accelerate
+safetensors
+numpy
+scipy
+pydub
+soundfile
