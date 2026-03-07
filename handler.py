@@ -1,21 +1,24 @@
 import runpod
 import base64
 import torch
+import numpy as np
 from stable_audio_tools import get_pretrained_model
 from stable_audio_tools.inference.generation import generate_diffusion_cond
+
+device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print("Loading Stable Audio model...")
 
 model, config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
-device = "cuda" if torch.cuda.is_available() else "cpu"
 model = model.to(device)
 
-print("Model loaded!")
+print("Model loaded")
 
-def generate(job):
+def handler(job):
+
     job_input = job["input"]
 
-    prompt = job_input.get("prompt", "melodic trap beat")
+    prompt = job_input.get("prompt", "melodic trap loop")
     duration = job_input.get("duration", 16)
 
     conditioning = [{
@@ -38,4 +41,5 @@ def generate(job):
 
     return {"audio": audio_base64}
 
-runpod.serverless.start({"handler": generate})
+
+runpod.serverless.start({"handler": handler})
