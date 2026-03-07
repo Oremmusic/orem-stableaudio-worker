@@ -1,7 +1,7 @@
 import runpod
-import base64
 import torch
-import numpy as np
+import base64
+from einops import rearrange
 from stable_audio_tools import get_pretrained_model
 from stable_audio_tools.inference.generation import generate_diffusion_cond
 
@@ -9,10 +9,14 @@ device = "cuda" if torch.cuda.is_available() else "cpu"
 
 print("Loading Stable Audio model...")
 
-model, config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
+model, model_config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
+sample_rate = model_config["sample_rate"]
+sample_size = model_config["sample_size"]
+
 model = model.to(device)
 
-print("Model loaded")
+print("Model loaded successfully")
+
 
 def handler(job):
 
@@ -23,6 +27,7 @@ def handler(job):
 
     conditioning = [{
         "prompt": prompt,
+        "seconds_start": 0,
         "seconds_total": duration
     }]
 
@@ -31,10 +36,16 @@ def handler(job):
         steps=100,
         cfg_scale=7,
         conditioning=conditioning,
-        sample_size=duration * model.sample_rate
+        sample_size=sample_size,
+        sigma_min=0.3,
+        sigma_max=500,
+        sampler_type="dpmpp-3m-sde",
+        device=device
     )
 
-    audio = output.cpu().numpy()[0]
+    output = rearrange(output, "b d n -> d (b n)")
+
+    audio = output.cpu().numpy()
 
     audio_bytes = audio.tobytes()
     audio_base64 = base64.b64encode(audio_bytes).decode()
