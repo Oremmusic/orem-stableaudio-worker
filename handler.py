@@ -29,9 +29,17 @@ def handler(job):
     job_input = job["input"]
 
     prompt = job_input.get("prompt", "melodic trap drum loop")
-    duration = job_input.get("duration", 16)
+    bpm = job_input.get("bpm", 120)
+    bars = job_input.get("bars", 4)
 
-    print(f"Generating audio for prompt: {prompt}")
+    # Calculate accurate loop duration
+    seconds_per_beat = 60 / bpm
+    beats_per_bar = 4
+    duration = bars * beats_per_bar * seconds_per_beat
+
+    print(f"Generating {bars} bar loop at {bpm} BPM")
+    print(f"Duration: {duration} seconds")
+    print(f"Prompt: {prompt}")
 
     conditioning = [{
         "prompt": prompt,
@@ -42,7 +50,7 @@ def handler(job):
     # Generate audio
     output = generate_diffusion_cond(
         model,
-        steps=40,  # faster generation
+        steps=40,
         cfg_scale=7,
         conditioning=conditioning,
         sample_size=sample_size,
@@ -65,10 +73,11 @@ def handler(job):
     print("Generation complete")
 
     return {
-        "output": {
-            "audio": audio_base64,
-            "sample_rate": sample_rate
-        }
+        "audio": audio_base64,
+        "sample_rate": sample_rate,
+        "bpm": bpm,
+        "bars": bars,
+        "duration": duration
     }
 
 
