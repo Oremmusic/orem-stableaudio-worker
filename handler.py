@@ -1,44 +1,41 @@
 import runpod
-import torch
 import base64
-import io
-import soundfile as sf
-from diffusers import StableAudioPipeline
-
-device = "cuda" if torch.cuda.is_available() else "cpu"
+import torch
+from stable_audio_tools import get_pretrained_model
+from stable_audio_tools.inference.generation import generate_diffusion_cond
 
 print("Loading Stable Audio model...")
 
-pipe = StableAudioPipeline.from_pretrained(
-    "stabilityai/stable-audio-open-1.0",
-    torch_dtype=torch.float16
-)
+model, config = get_pretrained_model("stabilityai/stable-audio-open-1.0")
+device = "cuda" if torch.cuda.is_available() else "cpu"
+model = model.to(device)
 
-pipe = pipe.to(device)
-
-print("Stable Audio model loaded.")
+print("Model loaded!")
 
 def generate(job):
-    prompt = job["input"].get("prompt", "lofi hip hop beat")
-    duration = job["input"].get("duration", 10)
+    job_input = job["input"]
 
-    print("Generating audio:", prompt)
+    prompt = job_input.get("prompt", "melodic trap beat")
+    duration = job_input.get("duration", 16)
 
-    audio = pipe(
-        prompt,
-        num_inference_steps=200,
-        audio_end_in_s=duration
-    ).audios[0]
+    conditioning = [{
+        "prompt": prompt,
+        "seconds_total": duration
+    }]
 
-    buffer = io.BytesIO()
-    sf.write(buffer, audio, 44100, format="WAV")
+    output = generate_diffusion_cond(
+        model,
+        steps=100,
+        cfg_scale=7,
+        conditioning=conditioning,
+        sample_size=duration * model.sample_rate
+    )
 
-    audio_base64 = base64.b64encode(buffer.getvalue()).decode()
+    audio = output.cpu().numpy()[0]
 
-    return {
-        "audio": audio_base64
-    }
+    audio_bytes = audio.tobytes()
+    audio_base64 = base64.b64encode(audio_bytes).decode()
 
-runpod.serverless.start(
-    {"handler": generate}
-)
+    return {"audio": audio_base64}
+
+runpod.serverless.start({"handler": generate})
