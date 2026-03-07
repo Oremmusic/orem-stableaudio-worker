@@ -1,11 +1,11 @@
 runpod
 torch
 torchaudio
-diffusers
 transformers
+diffusers
 accelerate
-safetensors
-numpy
-scipy
-pydub
+einops
+k-diffusion
+stable-audio-tools
 soundfile
+numpy
